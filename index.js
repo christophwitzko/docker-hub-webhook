@@ -18,11 +18,14 @@ const validName = /^[a-zA-Z0-9-_/]+$/
 const deploysh = _.template(fs.readFileSync('deploy.sh', 'utf8'))
 const defaultTag = process.env.DEFAULT_TAG || 'latest'
 const defaultToken = process.env.DEFAULT_TOKEN || crypto.randomBytes(12).toString('hex')
-const defaultParams = process.env.DEFAULT_PARAMS || ''
+const defaultParams = _.template(process.env.DEFAULT_PARAMS || '')
 
 console.log('default tag:', defaultTag)
 console.log('default token:', defaultToken)
-console.log('default params:', defaultParams)
+console.log('default params:', defaultParams({
+  repo_name: '<repo_name>',
+  name: '<name>'
+}))
 
 server.route({
   method: 'POST',
@@ -61,12 +64,14 @@ server.route({
       return sendCallback(true, 'skipped tag')
     }
 
-    const script = deploysh({
+    const info = {
       repo_name: repo.repo_name,
       name: repo.name,
-      tag: defaultTag,
-      params: defaultParams
-    })
+      tag: defaultTag
+    }
+    const script = deploysh(_.assign({
+      params: defaultParams(info)
+    }, info))
     exec(`bash -c '${script}' 2>&1`, (error, stdout, stderr) => {
       if (error) return sendCallback(false, 'script error: ' + error)
       sendCallback(true, 'successfully deployed image:\n' + stdout.toString())
