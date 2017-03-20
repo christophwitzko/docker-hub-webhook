@@ -26,9 +26,17 @@ var defaultParams *template.Template
 var deploysh = template.Must(template.ParseFiles("deploy.sh"))
 
 func init() {
-	randomBytes := make([]byte, 12)
-	rand.Read(randomBytes)
-	defaultToken = hex.EncodeToString(randomBytes)
+	if tag := os.Getenv("DEFAULT_TAG"); tag != "" {
+		defaultTag = tag
+	}
+	if token := os.Getenv("DEFAULT_TOKEN"); token != "" {
+		defaultToken = token
+	} else {
+		randomBytes := make([]byte, 12)
+		rand.Read(randomBytes)
+		defaultToken = hex.EncodeToString(randomBytes)
+	}
+	defaultParams = template.Must(template.New("params").Parse(os.Getenv("DEFAULT_PARAMS")))
 }
 
 type PushData struct {
@@ -138,14 +146,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	if tag := os.Getenv("DEFAULT_TAG"); tag != "" {
-		defaultTag = tag
-	}
-	if token := os.Getenv("DEFAULT_TOKEN"); token != "" {
-		defaultToken = token
-	}
-	defaultParams = template.Must(template.New("params").Parse(os.Getenv("DEFAULT_PARAMS")))
-
 	log.Printf("default tag: %s", defaultTag)
 	log.Printf("default token: %s", defaultToken)
 	buff := new(bytes.Buffer)
