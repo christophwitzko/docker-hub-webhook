@@ -1,13 +1,12 @@
-FROM mhart/alpine-node:5
+FROM golang:1-alpine
 
-RUN apk add --no-cache curl bash && \
-    curl -SL https://get.docker.com/builds/Linux/x86_64/docker-latest -o /usr/bin/docker && \
-    chmod +x /usr/bin/docker
+RUN apk add --no-cache curl bash docker
 
-WORKDIR /src
-ADD ["package.json", "deploy.sh", "index.js", "./"]
+ADD ["main.go", "deploy.sh", "/go/src/server/"]
+WORKDIR /go/src/server/
 
-RUN npm install --production
+ENV CGO_ENABLED=0
+RUN go build -a --installsuffix cgo -ldflags="-s -w"
 
 EXPOSE 5000
-CMD ["npm", "start"]
+CMD ["./server"]
