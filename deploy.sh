@@ -1,6 +1,6 @@
-docker pull <%= repo_name %>:<%= tag %>
-docker stop <%= name %>
-docker rm <%= name %>
-docker run -d --name <%= name %> <%= params %> <%= repo_name %>:<%= tag%>
+docker pull {{.RepoName}}:{{.Tag}}
+docker stop {{.Name}}
+docker rm {{.Name}}
+docker run -d --name {{.Name}} {{.Params}} {{.RepoName}}:{{.Tag}}
 docker rmi $(docker images -q -f dangling=true)
 exit 0
