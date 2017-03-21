@@ -20,14 +20,17 @@ const jsonContentType = "application/json; charset=utf-8"
 
 var validName = regexp.MustCompile("^[a-zA-Z0-9-_/]+$")
 var callbackClient = &http.Client{Timeout: 10 * time.Second}
-var defaultTag string = "latest"
+var defaultTag *regexp.Regexp
 var defaultToken string
 var defaultParams *template.Template
 var deploysh = template.Must(template.ParseFiles("deploy.sh"))
+var defaultVhost string = os.Getenv("DEFAULT_VHOST")
 
 func init() {
 	if tag := os.Getenv("DEFAULT_TAG"); tag != "" {
-		defaultTag = tag
+		defaultTag = regexp.MustCompile(tag)
+	} else {
+		defaultTag = regexp.MustCompile("^latest$")
 	}
 	if token := os.Getenv("DEFAULT_TOKEN"); token != "" {
 		defaultToken = token
@@ -62,6 +65,7 @@ type Callback struct {
 }
 
 type TemplateData struct {
+	Vhost    string
 	RepoName string
 	Name     string
 	Tag      string
@@ -118,13 +122,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "invalid input", http.StatusBadRequest)
 		return
 	}
-	if payload.PushData.Tag != defaultTag {
+	if !defaultTag.MatchString(payload.PushData.Tag) {
 		log.Printf("skipping tag: %s", payload.PushData.Tag)
 		sendCallback(w, payload.CallbackURL, true, "skipped tag")
 		return
 	}
 
 	info := TemplateData{
+		Vhost:    defaultVhost,
 		RepoName: payload.Repository.RepoName,
 		Name:     payload.Repository.Name,
 		Tag:      payload.PushData.Tag,
@@ -151,6 +156,7 @@ func main() {
 	buff := new(bytes.Buffer)
 	defaultParams.Execute(buff, TemplateData{RepoName: "<RepoName>", Name: "<Name>"})
 	log.Printf("default params: %s", buff.String())
+	log.Printf("default vhost: %s", defaultVhost)
 	log.Println("starting server on port 5000...")
 	log.Fatal(http.ListenAndServe(":5000", http.HandlerFunc(handler)))
 }
